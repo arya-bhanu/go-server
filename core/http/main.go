@@ -7,7 +7,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"go-server/core/database"
-	"go-server/core/routes"
+	"go-server/core/routing/routes"
 	"go-server/utils"
 )
 
@@ -21,6 +21,10 @@ func main() {
 	if err != nil {
 		utils.Loger.Error(err.Error())
 		return
+	}
+
+	if db != nil {
+		defer db.Close()
 	}
 
 	if db != nil {

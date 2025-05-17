@@ -35,7 +35,6 @@ func ConnectDB() (*sqlx.DB, error) {
 			return
 		}
 		dbFinal = db
-		defer db.Close()
 	})
 
 	return dbFinal, errDb
