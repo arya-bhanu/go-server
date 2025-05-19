@@ -49,7 +49,6 @@ func HandleRegister(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_, err = w.Write(jsonRes)
 	if err != nil {
@@ -89,7 +88,6 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	res, status := model.GenerateResponse(http.StatusOK, "Successfully Logged In", map[string]any{"token": "newToken"})
 
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	jsonRes, err := json.Marshal(res)
 	if err != nil {
