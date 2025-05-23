@@ -7,6 +7,7 @@ import (
 	"go-server/core/database"
 	"go-server/core/model"
 	"go-server/utils"
+	"go-server/utils/auth"
 )
 
 func HandleRegister(w http.ResponseWriter, r *http.Request) {
@@ -33,6 +34,7 @@ func HandleRegister(w http.ResponseWriter, r *http.Request) {
 	tx := db.MustBegin()
 	dbRes, err := tx.Exec("INSERT INTO user VALUES(uuid(),?,?,?,?)", userReq.Name, defaultUserRole, userReq.Email, string(hashed))
 	if err != nil {
+		tx.Rollback()
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -86,7 +88,13 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, status := model.GenerateResponse(http.StatusOK, "Successfully Logged In", map[string]any{"token": "newToken"})
+	tokenData, err := auth.LoginAuth(model.JwtData{Name: users[0].Name, Id: users[0].Id, Email: users[0].Email})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	res, status := model.GenerateResponse(http.StatusOK, "Successfully Logged In", tokenData)
 
 	w.WriteHeader(status)
 	jsonRes, err := json.Marshal(res)
