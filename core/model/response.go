@@ -15,9 +15,11 @@ type JwtClaims struct {
 }
 
 type JwtData struct {
-	Name  string `json:"name"`
-	Id    string `json:"id"`
-	Email string `json:"email"`
+	Name     string `json:"name"`
+	Id       string `json:"id"`
+	Email    string `json:"email"`
+	Role     string `json:"role"`
+	Username string `json:"username"`
 }
 
 type LoginAuth struct {

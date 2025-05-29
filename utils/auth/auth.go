@@ -13,10 +13,9 @@ import (
 	"go-server/core/database"
 	"go-server/core/model"
 	"go-server/utils"
-
 )
 
-var secretJwt *string
+var secretJwtKey *string
 var ctx = context.Background()
 
 func init() {
@@ -24,9 +23,9 @@ func init() {
 	secret := os.Getenv("JWT_SECRET")
 	if err == nil {
 		if secret == "" {
-			secretJwt = nil
+			secretJwtKey = nil
 		} else {
-			secretJwt = &secret
+			secretJwtKey = &secret
 		}
 	}
 
@@ -34,20 +33,49 @@ func init() {
 
 func LoginAuth(data model.JwtData) (*model.LoginAuth, error) {
 	token, err := generateJWTToken(data)
+	tokenRefresh, errRefresh := generateRefreshToken(data)
 	if err != nil {
 		return nil, err
 	}
+	if errRefresh != nil {
+		return nil, errRefresh
+	}
 	return &model.LoginAuth{
 		JwtAccessToken:  token,
-		JwtRefreshToken: "refresh_token_here",
+		JwtRefreshToken: tokenRefresh,
 	}, nil
+
+}
+
+func RefreshToken() {}
+
+func ValidateToken(tokenStr string) (*jwt.Token, error) {
+	tokenParsed, err := jwt.Parse(tokenStr, func(t *jwt.Token) (any, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
+		return []byte(*secretJwtKey), nil
+	})
+	if err != nil || !tokenParsed.Valid {
+		return nil, fmt.Errorf("error: invalid token %+v", err)
+	}
+
+	claims := tokenParsed.Claims.(jwt.MapClaims)
+
+	if exp, ok := claims["exp"].(float64); !ok || int64(exp) < time.Now().Unix() {
+		fmt.Print(exp)
+		fmt.Print(ok)
+		return nil, fmt.Errorf("error: token expire")
+	}
+
+	return tokenParsed, nil
 
 }
 
 func generateJWTToken(data model.JwtData) (string, error) {
 	// 1 hour JWT Token
 	expires := jwt.NewNumericDate(time.Now().Add(1 * time.Hour))
-	if secretJwt != nil {
+	if secretJwtKey != nil {
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, model.JwtClaims{
 			RegisteredClaims: jwt.RegisteredClaims{
 				ExpiresAt: expires,
@@ -57,7 +85,7 @@ func generateJWTToken(data model.JwtData) (string, error) {
 			Data: data,
 		})
 
-		tokenString, err := token.SignedString([]byte(*secretJwt))
+		tokenString, err := token.SignedString([]byte(*secretJwtKey))
 		if err != nil {
 			return "", err
 		}
@@ -67,7 +95,14 @@ func generateJWTToken(data model.JwtData) (string, error) {
 }
 
 func generateRefreshToken(data model.JwtData) (string, error) {
-
+	// 1 day token
+	expireTime := 24 * time.Hour
+	deviceId := generateDeviceUUID()
+	refreshToken, err := storeRefreshToken(data.Id, deviceId, expireTime)
+	if err != nil {
+		return "", err
+	}
+	return refreshToken, nil
 }
 
 func generateDeviceUUID() string {

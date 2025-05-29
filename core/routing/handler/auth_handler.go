@@ -32,7 +32,7 @@ func HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tx := db.MustBegin()
-	dbRes, err := tx.Exec("INSERT INTO user VALUES(uuid(),?,?,?,?)", userReq.Name, defaultUserRole, userReq.Email, string(hashed))
+	dbRes, err := tx.Exec("INSERT INTO user VALUES(uuid(),?,?,?,?,?)", userReq.Name, defaultUserRole, userReq.Email, string(hashed), userReq.Username)
 	if err != nil {
 		tx.Rollback()
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -76,7 +76,7 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	users := []model.User{}
 	identifier := loginReq.Identifier
 
-	err = db.Select(&users, "SELECT * FROM user WHERE name=? OR email=?", identifier, identifier)
+	err = db.Select(&users, "SELECT * FROM user WHERE username=? OR email=?", identifier, identifier)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -88,7 +88,7 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenData, err := auth.LoginAuth(model.JwtData{Name: users[0].Name, Id: users[0].Id, Email: users[0].Email})
+	tokenData, err := auth.LoginAuth(model.JwtData{Name: users[0].Name, Id: users[0].Id, Email: users[0].Email, Role: users[0].Role, Username: users[0].Username})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
